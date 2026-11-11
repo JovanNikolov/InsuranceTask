@@ -1,3 +1,4 @@
+using Claims.Auditing;
 using Claims.DTOs;
 using Claims.Models;
 using Claims.Repositories;
@@ -7,7 +8,7 @@ namespace Claims.Services;
 public sealed class ClaimsService(
     IClaimsRepository claimsRepository,
     ICoversRepository coversRepository,
-    IAuditRepository auditRepository,
+    IAuditQueue auditQueue,
     ClaimValidator validator) : IClaimsService
 {
     public async Task<IReadOnlyList<ClaimResponse>> GetAllAsync(CancellationToken cancellationToken)
@@ -40,7 +41,7 @@ public sealed class ClaimsService(
             return ServiceResult<ClaimResponse>.Failure(errors);
 
         await claimsRepository.AddAsync(claim, cancellationToken);
-        await auditRepository.AuditClaimAsync(claim.Id, "POST", cancellationToken);
+        auditQueue.Enqueue(AuditEntity.Claim, claim.Id, "POST");
         return ServiceResult<ClaimResponse>.Success(ClaimResponse.From(claim));
     }
 
@@ -48,7 +49,7 @@ public sealed class ClaimsService(
     {
         var deleted = await claimsRepository.DeleteAsync(id, cancellationToken);
         if (deleted)
-            await auditRepository.AuditClaimAsync(id, "DELETE", cancellationToken);
+            auditQueue.Enqueue(AuditEntity.Claim, id, "DELETE");
         return deleted;
     }
 }

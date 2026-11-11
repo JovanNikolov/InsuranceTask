@@ -1,3 +1,4 @@
+using Claims.Auditing;
 using Claims.Data;
 using Claims.Repositories;
 using Claims.Services;
@@ -30,6 +31,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PremiumCalculator>();
         services.AddScoped<IClaimsService, ClaimsService>();
         services.AddScoped<ICoversService, CoversService>();
+        return services;
+    }
+
+    public static IServiceCollection AddAuditing(this IServiceCollection services)
+    {
+        services.AddSingleton<AuditQueue>();
+        services.AddSingleton<IAuditQueue>(provider => provider.GetRequiredService<AuditQueue>());
+        services.AddHostedService<AuditWorker>();
         return services;
     }
 }

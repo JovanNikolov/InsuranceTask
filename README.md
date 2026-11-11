@@ -1,7 +1,7 @@
 # Claims API
 
 Backend for handling insurance claims. A cover insures a ship for a period and has a premium.
-A claim is filed against a cover. Every create and delete is audited.
+A claim is filed against a cover. Every create and delete is audited in the background.
 
 ## Running
 
@@ -29,6 +29,7 @@ src/Claims/
   Controllers/    HTTP only: map requests to services and results to status codes
   Services/       business logic, validators, premium calculator
   Repositories/   data access behind interfaces
+  Auditing/       audit queue and background worker
   Data/           EF Core contexts and migrations
   Models/         stored entities
   DTOs/           request and response records
@@ -65,6 +66,13 @@ Claim:
 - The cover must exist and Created must be within the cover period.
 
 Dates are compared by day and the end date is inclusive.
+
+## Auditing
+
+Creating or deleting a claim or cover puts an audit message on an in-memory `Channel` and the
+request returns without waiting for SQL Server. `AuditWorker`, a `BackgroundService`, saves the
+messages to the audit tables. A failed insert is logged and skipped. On shutdown the worker
+saves what is still queued, but audits that were queued when the process crashed are lost.
 
 ## Premium
 

@@ -1,3 +1,4 @@
+using Claims.Auditing;
 using Claims.Data;
 using Claims.Models;
 
@@ -5,15 +6,13 @@ namespace Claims.Repositories;
 
 public sealed class AuditRepository(AuditContext context) : IAuditRepository
 {
-    public async Task AuditClaimAsync(string claimId, string httpRequestType, CancellationToken cancellationToken)
+    public async Task AddAsync(AuditMessage message, CancellationToken cancellationToken)
     {
-        context.ClaimAudits.Add(new ClaimAudit { ClaimId = claimId, HttpRequestType = httpRequestType, Created = DateTime.Now });
-        await context.SaveChangesAsync(cancellationToken);
-    }
+        if (message.Entity == AuditEntity.Claim)
+            context.ClaimAudits.Add(new ClaimAudit { ClaimId = message.EntityId, HttpRequestType = message.HttpRequestType, Created = message.Created });
+        else
+            context.CoverAudits.Add(new CoverAudit { CoverId = message.EntityId, HttpRequestType = message.HttpRequestType, Created = message.Created });
 
-    public async Task AuditCoverAsync(string coverId, string httpRequestType, CancellationToken cancellationToken)
-    {
-        context.CoverAudits.Add(new CoverAudit { CoverId = coverId, HttpRequestType = httpRequestType, Created = DateTime.Now });
         await context.SaveChangesAsync(cancellationToken);
     }
 }

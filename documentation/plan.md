@@ -6,7 +6,7 @@ is small and independent, and the tests in Task 4 only make sense after the laye
 1. Task 2 – Validation – **done**
 2. Task 5 – Premium bugs – **done**
 3. Task 1 – Layering – **done**
-4. Task 3 – Async auditing – not started
+4. Task 3 – Async auditing – **done**
 5. Task 4 – Tests – not started
 6. Pull request description – not started
 
@@ -94,17 +94,35 @@ Done:
 9. Documentation: `README.md` at the root, and `EndpointSummary` / `ProducesResponseType` attributes so
    Swagger describes every endpoint and its status codes without comments in the code.
 
-## 4. Async auditing (Task 3)
+## 4. Async auditing (Task 3) – done
 
-Problem: every request waits for the SQL insert into the audit tables.
+Problem: every POST and DELETE waited for the SQL insert into the audit tables, so a slow or
+unavailable SQL Server slowed down or broke requests that had already saved to MongoDB.
 
-Approach, in-memory and without extra infrastructure:
+Options considered:
 
-- The service writes an audit message to a `Channel<T>` and returns right away.
-- A `BackgroundService` reads from the channel and writes to `AuditContext` in its own scope.
+- `Task.Run` / fire-and-forget – rejected, the scoped `DbContext` is disposed after the request
+  and exceptions are lost.
+- Outbox – does not fit, claims and covers are in MongoDB and audits in SQL Server, so there is
+  no shared transaction.
+- Azure Service Bus – durable, but needs infrastructure this task does not need.
+- `Channel<T>` with a `BackgroundService` – chosen, in-memory and no extra infrastructure.
 
-Trade-off to mention: audits waiting in the channel are lost if the process crashes.
-A queue such as Azure Service Bus would fix that, but is more than this task needs.
+Done, in `src/Claims/Auditing`:
+
+1. Services call `IAuditQueue.Enqueue`, which writes an `AuditMessage` to an unbounded channel and
+   returns right away. The timestamp is taken at that moment, in UTC from `TimeProvider`.
+2. `AuditWorker` reads the channel and saves each message through `IAuditRepository` in its own scope.
+3. A failed insert is logged and the worker continues with the next message.
+4. On shutdown the channel is completed and the worker saves what is still queued.
+
+Trade-offs:
+
+- Audits still in the channel are lost if the process crashes. Service Bus or another durable
+  queue would fix that.
+- The channel is unbounded. A bounded one would force a choice between blocking the request and
+  dropping audits.
+- No retries, failures are only logged. Retrying in memory does not help much while SQL is down.
 
 ## 5. Tests (Task 4)
 
@@ -113,7 +131,8 @@ Keep it to tests that prove the rules, not every line:
 - Validators – already covered.
 - Premium calculator – the cases from step 2.
 - Services – validation failure stops the save, success saves and enqueues an audit
-  (using fake repositories, no database).
+  (using fake repositories, no database). Started with `CoversServiceTests`.
+- Audit worker – queued audits are saved and a failure does not stop the worker.
 - Keep the existing integration test working.
 
 ## 6. Pull request

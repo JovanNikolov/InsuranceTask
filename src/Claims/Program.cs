@@ -29,7 +29,8 @@ builder.Services
 builder.Services
     .AddDatabases(sqlContainer.GetConnectionString(), mongoContainer.GetConnectionString(), builder.Configuration["MongoDb:DatabaseName"]!)
     .AddRepositories()
-    .AddApplicationServices();
+    .AddApplicationServices()
+    .AddAuditing();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

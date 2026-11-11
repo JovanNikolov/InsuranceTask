@@ -1,3 +1,4 @@
+using Claims.Auditing;
 using Claims.DTOs;
 using Claims.Models;
 using Claims.Repositories;
@@ -6,7 +7,7 @@ namespace Claims.Services;
 
 public sealed class CoversService(
     ICoversRepository coversRepository,
-    IAuditRepository auditRepository,
+    IAuditQueue auditQueue,
     CoverValidator validator,
     PremiumCalculator premiumCalculator) : ICoversService
 {
@@ -38,7 +39,7 @@ public sealed class CoversService(
 
         cover.Premium = premiumCalculator.Calculate(cover.StartDate, cover.EndDate, cover.Type);
         await coversRepository.AddAsync(cover, cancellationToken);
-        await auditRepository.AuditCoverAsync(cover.Id, "POST", cancellationToken);
+        auditQueue.Enqueue(AuditEntity.Cover, cover.Id, "POST");
         return ServiceResult<CoverResponse>.Success(CoverResponse.From(cover));
     }
 
@@ -46,7 +47,7 @@ public sealed class CoversService(
     {
         var deleted = await coversRepository.DeleteAsync(id, cancellationToken);
         if (deleted)
-            await auditRepository.AuditCoverAsync(id, "DELETE", cancellationToken);
+            auditQueue.Enqueue(AuditEntity.Cover, id, "DELETE");
         return deleted;
     }
 
