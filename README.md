@@ -20,7 +20,8 @@ and applies the audit migrations. Swagger is available at `/swagger` in the Deve
 dotnet test --solution Claims.sln
 ```
 
-The integration test starts the app with its containers, so Docker must be running.
+Unit tests cover the validators, premium calculator, services and audit worker without a database.
+The integration tests in `ClaimsControllerTests` start the app with its containers, so Docker must be running.
 
 ## Structure
 
@@ -62,10 +63,10 @@ Cover:
 - EndDate must be after StartDate and before the same date one year later.
 
 Claim:
-- DamageCost must be greater than 0 and at most 100.000.
+- DamageCost cannot be negative and is at most 100.000.
 - The cover must exist and Created must be within the cover period.
 
-Dates are compared by day and the end date is inclusive.
+Dates are saved as UTC days, the time part is dropped, and the end date is inclusive.
 
 ## Auditing
 

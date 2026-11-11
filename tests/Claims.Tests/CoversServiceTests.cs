@@ -30,6 +30,16 @@ public class CoversServiceTests
     }
 
     [Fact]
+    public async Task Dates_are_saved_as_utc_days()
+    {
+        await _service.CreateAsync(new CreateCoverRequest(Today.AddHours(15), Today.AddDays(10), CoverType.Yacht), CancellationToken.None);
+
+        var cover = Assert.Single(_repository.Covers);
+        Assert.Equal(Today, cover.StartDate);
+        Assert.Equal(DateTimeKind.Utc, cover.StartDate.Kind);
+    }
+
+    [Fact]
     public async Task Invalid_cover_is_not_saved_or_audited()
     {
         var result = await _service.CreateAsync(new CreateCoverRequest(Today.AddDays(-1), Today.AddDays(10), CoverType.Yacht), CancellationToken.None);
@@ -44,29 +54,5 @@ public class CoversServiceTests
     {
         Assert.False(await _service.DeleteAsync("missing", CancellationToken.None));
         Assert.Empty(_auditQueue.Messages);
-    }
-
-    private sealed class FakeCoversRepository : ICoversRepository
-    {
-        public List<Cover> Covers { get; } = [];
-
-        public Task<IReadOnlyList<Cover>> GetAllAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<Cover>>(Covers);
-
-        public Task<Cover?> GetByIdAsync(string id, CancellationToken cancellationToken) => Task.FromResult(Covers.FirstOrDefault(c => c.Id == id));
-
-        public Task AddAsync(Cover cover, CancellationToken cancellationToken)
-        {
-            Covers.Add(cover);
-            return Task.CompletedTask;
-        }
-
-        public Task<bool> DeleteAsync(string id, CancellationToken cancellationToken) => Task.FromResult(Covers.RemoveAll(c => c.Id == id) > 0);
-    }
-
-    private sealed class FakeAuditQueue : IAuditQueue
-    {
-        public List<(AuditEntity, string, string)> Messages { get; } = [];
-
-        public void Enqueue(AuditEntity entity, string entityId, string httpRequestType) => Messages.Add((entity, entityId, httpRequestType));
     }
 }

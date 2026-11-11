@@ -7,7 +7,7 @@ is small and independent, and the tests in Task 4 only make sense after the laye
 2. Task 5 – Premium bugs – **done**
 3. Task 1 – Layering – **done**
 4. Task 3 – Async auditing – **done**
-5. Task 4 – Tests – not started
+5. Task 4 – Tests – **done**
 6. Pull request description – not started
 
 ---
@@ -17,7 +17,7 @@ is small and independent, and the tests in Task 4 only make sense after the laye
 Rules live in `src/Claims/Services`:
 
 - `CoverValidator` – start date not in the past, end date after start date, period of at most one year.
-- `ClaimValidator` – damage cost greater than 0 and up to 100.000, cover must exist, created date inside the cover period.
+- `ClaimValidator` – damage cost not negative and up to 100.000, cover must exist, created date inside the cover period.
 
 Decisions:
 
@@ -124,16 +124,18 @@ Trade-offs:
   dropping audits.
 - No retries, failures are only logged. Retrying in memory does not help much while SQL is down.
 
-## 5. Tests (Task 4)
+## 5. Tests (Task 4) – done
 
 Keep it to tests that prove the rules, not every line:
 
 - Validators – already covered.
 - Premium calculator – the cases from step 2.
 - Services – validation failure stops the save, success saves and enqueues an audit
-  (using fake repositories, no database). Started with `CoversServiceTests`.
+  (using fake repositories from `Fakes.cs`, no database). `ClaimsServiceTests` and `CoversServiceTests`.
 - Audit worker – queued audits are saved and a failure does not stop the worker.
-- Keep the existing integration test working.
+- Integration tests in `ClaimsControllerTests` – the app runs with its real containers: create, read and
+  delete a claim, and a `400` with the failed rules for an invalid claim. Controllers have no unit tests,
+  they only map service results to status codes.
 
 ## 6. Pull request
 

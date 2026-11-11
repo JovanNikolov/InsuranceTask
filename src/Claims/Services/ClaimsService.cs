@@ -29,7 +29,7 @@ public sealed class ClaimsService(
         {
             Id = Guid.NewGuid().ToString(),
             CoverId = request.CoverId,
-            Created = request.Created,
+            Created = request.Created.ToUtcDate(),
             Name = request.Name,
             Type = request.Type,
             DamageCost = request.DamageCost

@@ -26,9 +26,9 @@ public class ClaimValidatorTests
     }
 
     [Fact]
-    public void DamageCost_zero_fails()
+    public void Negative_DamageCost_fails()
     {
-        var claim = new Claim { DamageCost = 0, Created = new DateTime(2026, 6, 1) };
+        var claim = new Claim { DamageCost = -1, Created = new DateTime(2026, 6, 1) };
 
         Assert.Contains(nameof(Claim.DamageCost), _validator.Validate(claim, _cover).Keys);
     }

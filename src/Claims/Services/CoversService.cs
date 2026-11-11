@@ -28,8 +28,8 @@ public sealed class CoversService(
         var cover = new Cover
         {
             Id = Guid.NewGuid().ToString(),
-            StartDate = request.StartDate,
-            EndDate = request.EndDate,
+            StartDate = request.StartDate.ToUtcDate(),
+            EndDate = request.EndDate.ToUtcDate(),
             Type = request.Type
         };
 

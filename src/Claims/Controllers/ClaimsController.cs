@@ -28,7 +28,7 @@ public class ClaimsController(IClaimsService claimsService) : ControllerBase
 
     [HttpPost]
     [EndpointSummary("Creates a claim for an existing cover.")]
-    [EndpointDescription("DamageCost not be less than 0 and at most 100000. Created must be within the cover period.")]
+    [EndpointDescription("DamageCost cannot be negative and is at most 100000. Created must be within the cover period.")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ClaimResponse>> Create(CreateClaimRequest request, CancellationToken cancellationToken)
