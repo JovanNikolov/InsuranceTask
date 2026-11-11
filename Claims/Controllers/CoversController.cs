@@ -1,4 +1,5 @@
 using Claims.Auditing;
+using Claims.Validation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,12 +12,14 @@ public class CoversController : ControllerBase
     private readonly ClaimsContext _claimsContext;
     private readonly ILogger<CoversController> _logger;
     private readonly Auditer _auditer;
+    private readonly CoverValidator _validator;
 
-    public CoversController(ClaimsContext claimsContext, AuditContext auditContext, ILogger<CoversController> logger)
+    public CoversController(ClaimsContext claimsContext, AuditContext auditContext, ILogger<CoversController> logger, CoverValidator validator)
     {
         _claimsContext = claimsContext;
         _logger = logger;
         _auditer = new Auditer(auditContext);
+        _validator = validator;
     }
 
     [HttpPost("compute")]
@@ -42,6 +45,10 @@ public class CoversController : ControllerBase
     [HttpPost]
     public async Task<ActionResult> CreateAsync(Cover cover)
     {
+        var errors = _validator.Validate(cover);
+        if (errors.Count > 0)
+            return ValidationProblem(new ValidationProblemDetails(errors));
+
         cover.Id = Guid.NewGuid().ToString();
         cover.Premium = ComputePremium(cover.StartDate, cover.EndDate, cover.Type);
         _claimsContext.Covers.Add(cover);

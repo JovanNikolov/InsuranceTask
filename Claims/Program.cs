@@ -1,5 +1,6 @@
 using Claims.Auditing;
 using Claims.Controllers;
+using Claims.Validation;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
 using System.Runtime.InteropServices;
@@ -28,6 +29,10 @@ builder.Services
     {
         x.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
+
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<CoverValidator>();
+builder.Services.AddSingleton<ClaimValidator>();
 
 builder.Services.AddDbContext<AuditContext>(options =>
     options.UseSqlServer(sqlContainer.GetConnectionString()));

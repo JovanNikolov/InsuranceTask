@@ -1,4 +1,5 @@
 using Claims.Auditing;
+using Claims.Validation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.EntityFrameworkCore.Extensions;
@@ -13,12 +14,14 @@ namespace Claims.Controllers
         private readonly ILogger<ClaimsController> _logger;
         private readonly ClaimsContext _claimsContext;
         private readonly Auditer _auditer;
+        private readonly ClaimValidator _validator;
 
-        public ClaimsController(ILogger<ClaimsController> logger, ClaimsContext claimsContext, AuditContext auditContext)
+        public ClaimsController(ILogger<ClaimsController> logger, ClaimsContext claimsContext, AuditContext auditContext, ClaimValidator validator)
         {
             _logger = logger;
             _claimsContext = claimsContext;
             _auditer = new Auditer(auditContext);
+            _validator = validator;
         }
 
         [HttpGet]
@@ -28,8 +31,13 @@ namespace Claims.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult> CreateAsync(Claim claim)
+        public async Task<ActionResult> CreateAsync(Claim claim, CancellationToken cancellationToken)
         {
+            var cover = await _claimsContext.Covers.SingleOrDefaultAsync(c => c.Id == claim.CoverId, cancellationToken);
+            var errors = _validator.Validate(claim, cover);
+            if (errors.Count > 0)
+                return ValidationProblem(new ValidationProblemDetails(errors));
+
             claim.Id = Guid.NewGuid().ToString();
             await _claimsContext.AddItemAsync(claim);
             _auditer.AuditClaim(claim.Id, "POST");
