@@ -5,7 +5,7 @@ is small and independent, and the tests in Task 4 only make sense after the laye
 
 1. Task 2 – Validation – **done**
 2. Task 5 – Premium bugs – **done**
-3. Task 1 – Layering – not started
+3. Task 1 – Layering – **done**
 4. Task 3 – Async auditing – not started
 5. Task 4 – Tests – not started
 6. Pull request description – not started
@@ -14,7 +14,7 @@ is small and independent, and the tests in Task 4 only make sense after the laye
 
 ## 1. Validation (Task 2) – done
 
-Rules live in `Claims/Validation`:
+Rules live in `src/Claims/Services`:
 
 - `CoverValidator` – start date not in the past, end date after start date, period of at most one year.
 - `ClaimValidator` – damage cost greater than 0 and up to 100.000, cover must exist, created date inside the cover period.
@@ -26,7 +26,7 @@ Decisions:
 - `TimeProvider` is injected so "not in the past" can be tested with a fixed date.
 - `ClaimValidator` gets the cover passed in instead of loading it, so it stays free of the database.
 
-Currently the controllers call the validators. This moves into the service layer in step 3.
+The services call the validators, see step 3.
 
 ## 2. Premium computation (Task 5) – done
 
@@ -53,28 +53,46 @@ Steps:
 4. The end date counts as an insurance day, the same as in `ClaimValidator`. `CoverValidator` now
    requires the end date to be before the same date next year, so a cover is at most 365 or 366 days.
 
-## 3. Layering (Task 1)
+## 3. Layering (Task 1) – done
 
 Goal: thin controllers that only translate between HTTP and the application.
 
 ```
 Controllers  →  Services  →  Repositories  →  EF Core contexts
                    ↓
-              Validators, PremiumCalculator, Auditer
+              Validators, PremiumCalculator
 ```
 
-Steps:
+Structure:
 
-1. Move `ClaimsContext` out of `ClaimsController.cs` into a data folder.
-2. Add `IClaimsRepository` / `ICoversRepository` on top of the contexts.
-3. Add `ClaimsService` / `CoversService` that validate, save and audit.
-4. Services return a result with the validation errors instead of throwing, and the
-   controllers map a failed result to `400 ValidationProblemDetails`.
-5. Register the auditer through DI instead of `new Auditer(...)` in the controllers.
-6. Fix small API issues on the way: `GET /covers/{id}` loads the whole collection,
-   `POST` returns `200` instead of `201`, missing items return `200` with null instead of `404`.
-7. Move the DI registrations from `Program.cs` into extension methods to keep it short.
-8. Add XML summaries on the public API so Swagger shows proper documentation.
+```
+Claims.sln
+src/Claims/
+  Controllers/    HTTP only
+  Services/       business logic, validators, premium calculator
+  Repositories/   data access behind interfaces
+  Data/           ClaimsContext, AuditContext, Migrations
+  Models/         stored entities
+  DTOs/           request and response records
+  Extensions/     DI registration
+tests/Claims.Tests/
+```
+
+Done:
+
+1. `ClaimsContext` moved out of `ClaimsController.cs` into `Data`.
+2. `IClaimsRepository`, `ICoversRepository` and `IAuditRepository` on top of the contexts.
+3. `ClaimsService` / `CoversService` validate, save and audit.
+4. Services return a `ServiceResult` with the validation errors, and the controllers map a
+   failed result to `400 ValidationProblemDetails`.
+5. Auditing goes through `IAuditRepository` from DI instead of `new Auditer(...)` in the controllers.
+6. API fixes: `GET /covers/{id}` queries one cover instead of the whole collection, `POST` returns
+   `201` with a location, missing items return `404`, `DELETE` returns `204`, or `404` if nothing was deleted.
+7. DI registrations moved from `Program.cs` into extension methods.
+8. Requests and responses use DTOs, so a client cannot set `Id` or `Premium`.
+
+9. Documentation: `README.md` at the root, and `EndpointSummary` / `ProducesResponseType` attributes so
+   Swagger describes every endpoint and its status codes without comments in the code.
 
 ## 4. Async auditing (Task 3)
 
