@@ -1,4 +1,5 @@
 using Claims.Auditing;
+using Claims.Premiums;
 using Claims.Validation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,19 +14,25 @@ public class CoversController : ControllerBase
     private readonly ILogger<CoversController> _logger;
     private readonly Auditer _auditer;
     private readonly CoverValidator _validator;
+    private readonly PremiumCalculator _premiumCalculator;
 
-    public CoversController(ClaimsContext claimsContext, AuditContext auditContext, ILogger<CoversController> logger, CoverValidator validator)
+    public CoversController(ClaimsContext claimsContext, AuditContext auditContext, ILogger<CoversController> logger, CoverValidator validator, PremiumCalculator premiumCalculator)
     {
         _claimsContext = claimsContext;
         _logger = logger;
         _auditer = new Auditer(auditContext);
         _validator = validator;
+        _premiumCalculator = premiumCalculator;
     }
 
     [HttpPost("compute")]
-    public async Task<ActionResult> ComputePremiumAsync(DateTime startDate, DateTime endDate, CoverType coverType)
+    public ActionResult<decimal> ComputePremium(DateTime startDate, DateTime endDate, CoverType coverType)
     {
-        return Ok(ComputePremium(startDate, endDate, coverType));
+        var errors = _validator.Validate(new Cover { StartDate = startDate, EndDate = endDate, Type = coverType });
+        if (errors.Count > 0)
+            return ValidationProblem(new ValidationProblemDetails(errors));
+
+        return Ok(_premiumCalculator.Calculate(startDate, endDate, coverType));
     }
 
     [HttpGet]
@@ -50,7 +57,7 @@ public class CoversController : ControllerBase
             return ValidationProblem(new ValidationProblemDetails(errors));
 
         cover.Id = Guid.NewGuid().ToString();
-        cover.Premium = ComputePremium(cover.StartDate, cover.EndDate, cover.Type);
+        cover.Premium = _premiumCalculator.Calculate(cover.StartDate, cover.EndDate, cover.Type);
         _claimsContext.Covers.Add(cover);
         await _claimsContext.SaveChangesAsync();
         _auditer.AuditCover(cover.Id, "POST");
@@ -69,37 +76,4 @@ public class CoversController : ControllerBase
         }
     }
 
-    private decimal ComputePremium(DateTime startDate, DateTime endDate, CoverType coverType)
-    {
-        var multiplier = 1.3m;
-        if (coverType == CoverType.Yacht)
-        {
-            multiplier = 1.1m;
-        }
-
-        if (coverType == CoverType.PassengerShip)
-        {
-            multiplier = 1.2m;
-        }
-
-        if (coverType == CoverType.Tanker)
-        {
-            multiplier = 1.5m;
-        }
-
-        var premiumPerDay = 1250 * multiplier;
-        var insuranceLength = (endDate - startDate).TotalDays;
-        var totalPremium = 0m;
-
-        for (var i = 0; i < insuranceLength; i++)
-        {
-            if (i < 30) totalPremium += premiumPerDay;
-            if (i < 180 && coverType == CoverType.Yacht) totalPremium += premiumPerDay - premiumPerDay * 0.05m;
-            else if (i < 180) totalPremium += premiumPerDay - premiumPerDay * 0.02m;
-            if (i < 365 && coverType != CoverType.Yacht) totalPremium += premiumPerDay - premiumPerDay * 0.03m;
-            else if (i < 365) totalPremium += premiumPerDay - premiumPerDay * 0.08m;
-        }
-
-        return totalPremium;
-    }
 }

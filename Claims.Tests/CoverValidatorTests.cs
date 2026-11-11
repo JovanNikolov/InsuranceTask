@@ -11,7 +11,7 @@ public class CoverValidatorTests
     [Fact]
     public void Valid_cover_passes()
     {
-        var errors = _validator.Validate(new Cover { StartDate = Today, EndDate = Today.AddYears(1) });
+        var errors = _validator.Validate(new Cover { StartDate = Today, EndDate = Today.AddYears(1).AddDays(-1) });
 
         Assert.Empty(errors);
     }
@@ -27,7 +27,7 @@ public class CoverValidatorTests
     [Fact]
     public void Period_longer_than_a_year_fails()
     {
-        var errors = _validator.Validate(new Cover { StartDate = Today, EndDate = Today.AddYears(1).AddDays(1) });
+        var errors = _validator.Validate(new Cover { StartDate = Today, EndDate = Today.AddYears(1) });
 
         Assert.Contains(nameof(Cover.EndDate), errors.Keys);
     }

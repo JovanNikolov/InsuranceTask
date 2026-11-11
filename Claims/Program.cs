@@ -1,5 +1,6 @@
 using Claims.Auditing;
 using Claims.Controllers;
+using Claims.Premiums;
 using Claims.Validation;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
@@ -33,6 +34,7 @@ builder.Services
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<CoverValidator>();
 builder.Services.AddSingleton<ClaimValidator>();
+builder.Services.AddSingleton<PremiumCalculator>();
 
 builder.Services.AddDbContext<AuditContext>(options =>
     options.UseSqlServer(sqlContainer.GetConnectionString()));

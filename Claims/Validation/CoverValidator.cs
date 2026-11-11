@@ -14,7 +14,7 @@ public sealed class CoverValidator(TimeProvider timeProvider)
 
         if (endDate <= startDate)
             errors[nameof(Cover.EndDate)] = ["EndDate must be after StartDate."];
-        else if (endDate > startDate.AddYears(1))
+        else if (endDate >= startDate.AddYears(1))
             errors[nameof(Cover.EndDate)] = ["Insurance period cannot exceed 1 year."];
 
         return errors;

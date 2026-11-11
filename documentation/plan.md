@@ -4,7 +4,7 @@ Working plan for the Claims API task. Tasks are not done in README order: the pr
 is small and independent, and the tests in Task 4 only make sense after the layering in Task 1.
 
 1. Task 2 – Validation – **done**
-2. Task 5 – Premium bugs – not started
+2. Task 5 – Premium bugs – **done**
 3. Task 1 – Layering – not started
 4. Task 3 – Async auditing – not started
 5. Task 4 – Tests – not started
@@ -28,7 +28,7 @@ Decisions:
 
 Currently the controllers call the validators. This moves into the service layer in step 3.
 
-## 2. Premium computation (Task 5)
+## 2. Premium computation (Task 5) – done
 
 Bugs in `CoversController.ComputePremium`:
 
@@ -50,7 +50,8 @@ Steps:
 1. Move the calculation into its own class, e.g. `PremiumCalculator`.
 2. Replace the loop with a sum per range (days in range × discounted rate).
 3. Add a few tests: a short period, one crossing day 30, one crossing day 180, and a Yacht case.
-4. Open question: should the end date count as an insurance day? Decide and note it in the PR.
+4. The end date counts as an insurance day, the same as in `ClaimValidator`. `CoverValidator` now
+   requires the end date to be before the same date next year, so a cover is at most 365 or 366 days.
 
 ## 3. Layering (Task 1)
 
